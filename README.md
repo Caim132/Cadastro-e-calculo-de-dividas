@@ -323,4 +323,3 @@ Algumas ideias para evoluir o projeto:
 Este projeto está sob a licença MIT.
 
 Você pode usar, modificar e adaptar conforme sua necessidade.
-
