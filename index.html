@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Controle de Dívidas</title>
+  <meta
+    name="description"
+    content="Aplicativo simples para cadastrar clientes, registrar dívidas e calcular valores atualizados com juros compostos anuais."
+  />
+
+  <link rel="stylesheet" href="./assets/styles.css" />
+
+  <!--
+    Biblioteca oficial do Supabase para JavaScript.
+    Em produção, você também pode instalar via npm, mas este projeto foi pensado
+    para rodar de forma simples, direto no navegador.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Controle de Dívidas</h1>
+      <p>Clientes, dívidas e cálculo atualizado com juros compostos anuais.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="setup-warning" class="card hidden">
+      <h2>Configuração pendente</h2>
+      <p>
+        Antes de usar o app, preencha sua URL e chave pública do Supabase no arquivo
+        <code>assets/config.js</code>.
+      </p>
+      <p class="muted">
+        No README você encontra o passo a passo completo para criar o projeto no Supabase.
+      </p>
+    </section>
+
+    <section id="auth-screen" class="card auth-card">
+      <h2>Acesse sua conta</h2>
+      <p class="muted">
+        Entre com email e senha. Cada usuário acessa somente os próprios clientes e dívidas.
+      </p>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="auth-email">Email</label>
+          <input id="auth-email" type="email" autocomplete="email" placeholder="voce@email.com" />
+        </div>
+
+        <div class="field">
+          <label for="auth-password">Senha</label>
+          <input id="auth-password" type="password" autocomplete="current-password" placeholder="Sua senha" />
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button class="button primary" id="btn-sign-in">Entrar</button>
+        <button class="button secondary" id="btn-sign-up">Criar conta</button>
+      </div>
+
+      <p id="auth-message" class="status-message"></p>
+    </section>
+
+    <section id="app-screen" class="hidden">
+      <div class="topbar">
+        <div>
+          <span class="muted">Usuário logado</span>
+          <strong id="logged-user"></strong>
+        </div>
+
+        <button class="button secondary" id="btn-sign-out">Sair</button>
+      </div>
+
+      <nav class="tabs" aria-label="Navegação principal">
+        <button class="tab active" data-target="dashboard">Dashboard</button>
+        <button class="tab" data-target="customers">Clientes</button>
+        <button class="tab" data-target="debts">Dívidas</button>
+        <button class="tab" data-target="report">Relatório</button>
+        <button class="tab" data-target="settings">Configurações</button>
+      </nav>
+
+      <section id="dashboard" class="page active">
+        <div class="metrics-grid">
+          <article class="metric-card">
+            <span>Clientes cadastrados</span>
+            <strong id="metric-customers">0</strong>
+          </article>
+
+          <article class="metric-card">
+            <span>Dívidas registradas</span>
+            <strong id="metric-debts">0</strong>
+          </article>
+
+          <article class="metric-card">
+            <span>Total atualizado</span>
+            <strong id="metric-total">R$ 0,00</strong>
+          </article>
+        </div>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <h2>Resumo por cliente</h2>
+              <p class="muted">Valores calculados até hoje.</p>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            
+<div class="field">
+  <label for="cpf-search">Buscar cliente por CPF</label>
+  <input id="cpf-search" placeholder="Digite o CPF">
+</div>
+
+<table>
+
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>CPF</th>
+                  <th>Email</th>
+                  <th>Telefone</th>
+                  <th>Dívidas</th>
+                  <th>Total atualizado</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-customers-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="customers" class="page">
+        <section class="card">
+          <h2>Cadastrar cliente</h2>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="customer-name">Nome completo</label>
+              <input id="customer-name" placeholder="Exemplo: João Silva" />
+            </div>
+
+            <div class="field">
+              <label for="customer-cpf">CPF</label>
+              <input id="customer-cpf" placeholder="Somente números ou com pontuação" />
+            </div>
+
+            <div class="field">
+              <label for="customer-email">Email</label>
+              <input id="customer-email" type="email" placeholder="cliente@email.com" />
+            </div>
+
+            <div class="field">
+              <label for="customer-phone">Telefone</label>
+              <input id="customer-phone" placeholder="(00) 00000-0000" />
+            </div>
+          </div>
+
+          <button class="button primary" id="btn-save-customer">Salvar cliente</button>
+        </section>
+
+        <section class="card">
+          <h2>Clientes cadastrados</h2>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>CPF</th>
+                  <th>Email</th>
+                  <th>Telefone</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="customers-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="debts" class="page">
+        <section class="card">
+          <h2>Adicionar dívida</h2>
+
+          <div class="alert warning">
+            Use a taxa anual prevista no contrato. A Selic de referência é apenas um apoio para preenchimento.
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="debt-customer">Cliente</label>
+              <select id="debt-customer"></select>
+            </div>
+
+            <div class="field">
+              <label for="debt-description">Descrição</label>
+              <input id="debt-description" placeholder="Exemplo: Empréstimo pessoal" />
+            </div>
+
+            <div class="field">
+              <label for="debt-amount">Valor inicial</label>
+              <input id="debt-amount" type="number" min="0" step="0.01" placeholder="5000.00" />
+            </div>
+
+            <div class="field">
+              <label for="debt-start-date">Data inicial</label>
+              <input id="debt-start-date" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="debt-rate-type">Tipo de taxa</label>
+              <select id="debt-rate-type">
+                <option value="Manual">Informar manualmente</option>
+                <option value="Selic de referência">Usar Selic de referência</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="debt-rate">Juros anual (%)</label>
+              <input id="debt-rate" type="number" min="0" step="0.01" placeholder="12.00" />
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button class="button secondary" id="btn-fill-selic">Preencher Selic</button>
+            <button class="button primary" id="btn-save-debt">Salvar dívida</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="report" class="page">
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <h2>Relatório por cliente</h2>
+              <p class="muted">Escolha o cliente e a data-base do cálculo.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="report-customer">Cliente</label>
+              <select id="report-customer"></select>
+            </div>
+
+            <div class="field">
+              <label for="report-date">Data para cálculo</label>
+              <input id="report-date" type="date" />
+            </div>
+          </div>
+
+          <div id="report-content"></div>
+        </section>
+      </section>
+
+      <section id="settings" class="page">
+        <section class="card">
+          <h2>Configurações</h2>
+
+          <div class="alert info">
+            Clientes e dívidas ficam no Supabase. A Selic de referência abaixo fica salva neste navegador.
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="setting-selic">Selic anual de referência (%)</label>
+              <input id="setting-selic" type="number" min="0" step="0.01" />
+            </div>
+
+            <div class="field align-bottom">
+              <button class="button primary" id="btn-save-selic">Salvar Selic</button>
+            </div>
+          </div>
+
+          <hr />
+
+          <button class="button secondary" id="btn-refresh">Recarregar dados do banco</button>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <footer class="footer">
+    Feito para controle interno. Valide sempre a taxa de juros no contrato original.
+  </footer>
+
+  <!--
+    Este arquivo não vai para o GitHub por segurança.
+    Crie uma cópia de assets/config.example.js chamada assets/config.js
+    e preencha com os dados do seu projeto Supabase.
+  -->
+  <script src="./assets/config.js"></script>
+  <script src="./assets/app.js"></script>
+</body>
+</html>
